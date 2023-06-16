@@ -1,4 +1,4 @@
-from typing import Dict, Tuple, List
+from typing import Dict, Tuple, List, Set
 from dataclasses import dataclass
 import abc
 
@@ -29,17 +29,18 @@ class GraphNode:
 
 
 class Solver:
-    def __init__(self, dist_provider: DistanceProvider):
+    def __init__(self, dist_provider: DistanceProvider, cons: GoalContraints):
         self._dist_provider = dist_provider
+        self._cons = cons
 
-    def get_edges(self, cons: GoalContraints, where: int, now: float):
-        # travel time, end time
+    def get_edges(self, cons: set[int], where: int, now: float):
         possible_nexts: EdgeSet = {}
         if where != HOME:
             travel_time = self._dist_provider.get_distance(round(now), where, HOME)
             possible_nexts[HOME] = (travel_time, now + travel_time)
 
-        for loc, info in cons.items():
+        for loc in cons:
+            info = self._cons[loc]
             travel_time: float = self._dist_provider.get_distance(
                 round(now), where, loc
             )
@@ -62,7 +63,7 @@ class Solver:
 
         return possible_nexts
 
-    def build_graph(self, cons: GoalContraints, where: int, now: float) -> GraphNode:
+    def build_graph(self, cons: set[int], where: int, now: float) -> GraphNode:
         possible_nexts = self.get_edges(cons, where, now)
 
         graph: GraphNode = GraphNode(where, {})
@@ -70,15 +71,17 @@ class Solver:
         for loc, (travel_time, end_time) in possible_nexts.items():
             new_cons = cons.copy()
             if loc != HOME:
-                del new_cons[loc]
+                new_cons.remove(loc)
+                # del new_cons[loc]
             lg = self.build_graph(new_cons, loc, end_time)
 
             graph.e[loc] = travel_time, lg
 
         return graph
 
-    def solve(self, cons: GoalContraints):
-        seen = Dict[str, bool]
-        graph = Dict[str, List[str]]
+    def solve(self):
+        graph = self.build_graph(set(self._cons.keys()), HOME, 0)
 
-        graph[HOME] = []
+        pq: List[Tuple[Set[int], List[GraphNode]]] = []
+
+        pq.append((set(self._cons.keys()), [GraphNode(HOME, {})]))
