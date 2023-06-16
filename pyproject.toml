@@ -1,0 +1,29 @@
+[tool.poetry]
+name = "calendar-planner"
+version = "0.1.0"
+description = ""
+authors = ["Pentra <Pentracillin@gmail.com>"]
+readme = "README.md"
+packages = [{ include = "calendar_planner" }]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+
+
+[tool.poetry.group.dev.dependencies]
+black = "^23.3.0"
+flake8 = "^6.0.0"
+pytest = "^7.3.2"
+mock = "^5.0.2"
+pytest-cov = "^4.1.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+planner = "calendar_planner.main:main"
+
+
+[tool.isort]
+profile = "black"
