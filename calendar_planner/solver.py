@@ -1,6 +1,7 @@
-from typing import Dict, Tuple, List, Set
-from dataclasses import dataclass
 import abc
+import heapq
+from dataclasses import dataclass
+from typing import Dict, List, Set, Tuple
 
 
 @dataclass
@@ -72,7 +73,6 @@ class Solver:
             new_cons = cons.copy()
             if loc != HOME:
                 new_cons.remove(loc)
-                # del new_cons[loc]
             lg = self.build_graph(new_cons, loc, end_time)
 
             graph.e[loc] = travel_time, lg
@@ -84,4 +84,20 @@ class Solver:
 
         pq: List[Tuple[Set[int], List[GraphNode]]] = []
 
-        pq.append((set(self._cons.keys()), [GraphNode(HOME, {})]))
+        pq.append((set(self._cons.keys()), [graph]))
+
+        while pq:
+            cons, path = heapq.heappop(pq)
+
+            node = path[-1]
+
+            if not cons:
+                return path
+
+            for loc, (travel_time, lg) in node.e.items():
+                new_cons = cons.copy()
+                if loc != HOME:
+                    new_cons.remove(loc)
+                new_path = path.copy()
+                new_path.append(lg)
+                heapq.heappush(pq, (new_cons, new_path))
