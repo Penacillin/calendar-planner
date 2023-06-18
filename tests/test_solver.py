@@ -1,4 +1,10 @@
-from calendar_planner.solver import Solver, DistanceProvider, ConstraintSlot, GraphNode
+from calendar_planner.solver import (
+    Solver,
+    DistanceProvider,
+    MatrixDistanceProvider,
+    ConstraintSlot,
+    GraphNode,
+)
 import mock
 
 
@@ -59,36 +65,7 @@ def test_get_next_two_slots():
     assert r == {1: (1.0, 12)}
 
 
-def test_graph_one():
-    pl = mock.MagicMock()
-    prov = MockDistanceProvider(pl)
-    s = Solver(prov, {1: ConstraintSlot([(10, 15)], 2)})
-
-    pl.return_value = 1.0
-
-    r = s.build_graph({1}, 0, 0)
-
-    assert r.v == 0
-    assert r.e == {
-        1: (  # goto 1
-            1.0,
-            GraphNode(
-                v=1,
-                e={
-                    0: (  # goto 0
-                        1.0,
-                        GraphNode(
-                            v=0,
-                            e={},
-                        ),
-                    ),
-                },
-            ),
-        ),
-    }
-
-
-def test_graph_two():
+def test_solve_one():
     pl = mock.MagicMock()
     prov = MockDistanceProvider(pl)
     s = Solver(
@@ -97,75 +74,37 @@ def test_graph_two():
 
     pl.return_value = 1.0
 
-    r = s.build_graph({1, 2}, 0, 0)
+    cost, end_t, r = s.solve()
 
-    assert r.v == 0
-    assert r.e == {
-        1: (  # goto 1
-            1.0,
-            GraphNode(
-                v=1,  # now t=10
-                e={
-                    0: (  # goto 0
-                        1.0,
-                        GraphNode(
-                            v=0,  # now t=13
-                            e={
-                                2: (  # goto 2
-                                    1.0,
-                                    GraphNode(
-                                        v=2,  # now t=14
-                                        e={
-                                            0: (  # goto 0
-                                                1.0,
-                                                GraphNode(
-                                                    v=0,  # now t=18
-                                                    e={},
-                                                ),
-                                            ),
-                                        },
-                                    ),
-                                ),
-                            },
-                        ),
-                    ),
-                    2: (  # goto 2
-                        1.0,
-                        GraphNode(
-                            v=2,
-                            e={
-                                0: (  # goto 0
-                                    1.0,
-                                    GraphNode(
-                                        v=0,
-                                        e={},
-                                    ),
-                                ),
-                            },
-                        ),
-                    ),
-                },
-            ),
-        ),
-        2: (  # goto 2
-            1.0,
-            GraphNode(
-                v=2,
-                e={
-                    0: (  # goto 0
-                        1.0,
-                        GraphNode(
-                            v=0,
-                            e={},
-                        ),
-                    ),
-                },
-            ),
-        ),
+    assert [0, 1, 2] == r
+
+
+def test_solve_asym():
+    dist_mat = {
+        0: {
+            1: 100.0,
+            2: 1.0,
+        },
+        1: {
+            0: 1.0,
+            2: 1.0,
+        },
+        2: {
+            0: 1.0,
+            1: 1.0,
+        },
     }
+    prov = MatrixDistanceProvider(dist_mat)
+    s = Solver(
+        prov, {1: ConstraintSlot([(10, 17)], 2), 2: ConstraintSlot([(11, 17)], 3)}
+    )
+
+    cost, end_t, r = s.solve()
+
+    assert [0, 2, 1] == r
 
 
-def test_graph_two_tight():
+def test_solve_tight():
     pl = mock.MagicMock()
     prov = MockDistanceProvider(pl)
     s = Solver(
@@ -174,53 +113,6 @@ def test_graph_two_tight():
 
     pl.return_value = 1.0
 
-    r = s.build_graph({1, 2}, 0, 0)
+    cost, end_t, r = s.solve()
 
-    assert r.v == 0
-    assert r.e == {
-        1: (  # goto 1
-            1.0,
-            GraphNode(
-                v=1,  # now t=10
-                e={
-                    0: (  # goto 0
-                        1.0,
-                        GraphNode(
-                            v=0,  # now t=13
-                            e={},  # wasted time going 0, can't go to 2
-                        ),
-                    ),
-                    2: (  # goto 2
-                        1.0,
-                        GraphNode(
-                            v=2,
-                            e={
-                                0: (  # goto 0
-                                    1.0,
-                                    GraphNode(
-                                        v=0,
-                                        e={},
-                                    ),
-                                ),
-                            },
-                        ),
-                    ),
-                },
-            ),
-        ),
-        2: (  # goto 2
-            1.0,
-            GraphNode(
-                v=2,
-                e={
-                    0: (  # goto 0
-                        1.0,
-                        GraphNode(
-                            v=0,
-                            e={},
-                        ),
-                    ),
-                },
-            ),
-        ),
-    }
+    assert [0, 1, 2] == r

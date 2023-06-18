@@ -10,9 +10,10 @@ class ConstraintSlot:
     duration: float
 
 
-DistanceMatrix = Dict[int, Dict[int, Dict[int, float]]]  # int is location index
 GoalContraints = Dict[int, ConstraintSlot]  # int is User index
-EdgeSet = Dict[int, Tuple[float, float]]  # travel time, end time
+
+# v -> travel time, end time
+EdgeSet = Dict[int, Tuple[float, float]]
 
 HOME = 0
 
@@ -21,6 +22,14 @@ class DistanceProvider(abc.ABC):
     @abc.abstractmethod
     def get_distance(self, when: int, from_: int, to: int) -> float:
         ...
+
+
+class MatrixDistanceProvider(DistanceProvider):
+    def __init__(self, mat: Dict[int, Dict[int, float]]):
+        self._mat = mat
+
+    def get_distance(self, _: int, from_: int, to: int) -> float:
+        return self._mat[from_][to]
 
 
 @dataclass
@@ -34,7 +43,7 @@ class Solver:
         self._dist_provider = dist_provider
         self._cons = cons
 
-    def get_edges(self, cons: set[int], where: int, now: float):
+    def get_edges(self, cons: set[int], where: int, now: float) -> EdgeSet:
         possible_nexts: EdgeSet = {}
         if where != HOME:
             travel_time = self._dist_provider.get_distance(round(now), where, HOME)
@@ -64,40 +73,28 @@ class Solver:
 
         return possible_nexts
 
-    def build_graph(self, cons: set[int], where: int, now: float) -> GraphNode:
-        possible_nexts = self.get_edges(cons, where, now)
-
-        graph: GraphNode = GraphNode(where, {})
-
-        for loc, (travel_time, end_time) in possible_nexts.items():
-            new_cons = cons.copy()
-            if loc != HOME:
-                new_cons.remove(loc)
-            lg = self.build_graph(new_cons, loc, end_time)
-
-            graph.e[loc] = travel_time, lg
-
-        return graph
-
     def solve(self):
-        graph = self.build_graph(set(self._cons.keys()), HOME, 0)
+        # cost, time, remaining cons, cur path
+        pq: List[Tuple[float, float, Set[int], List[int]]] = []
 
-        pq: List[Tuple[Set[int], List[GraphNode]]] = []
-
-        pq.append((set(self._cons.keys()), [graph]))
+        pq.append((0.0, 0.0, set(self._cons.keys()), [HOME]))
 
         while pq:
-            cons, path = heapq.heappop(pq)
-
-            node = path[-1]
+            cur_cost, cur_time, cons, path = heapq.heappop(pq)
 
             if not cons:
-                return path
+                return cur_cost, cur_time, path
 
-            for loc, (travel_time, lg) in node.e.items():
+            u = path[-1]
+
+            next_es = self.get_edges(cons, u, cur_time)
+
+            for v, (v_travel_time, v_end_time) in next_es.items():
                 new_cons = cons.copy()
-                if loc != HOME:
-                    new_cons.remove(loc)
+                if v != HOME:
+                    new_cons.remove(v)
                 new_path = path.copy()
-                new_path.append(lg)
-                heapq.heappush(pq, (new_cons, new_path))
+                new_path.append(v)
+                heapq.heappush(
+                    pq, (cur_cost + v_travel_time, v_end_time, new_cons, new_path)
+                )
