@@ -32,12 +32,6 @@ class MatrixDistanceProvider(DistanceProvider):
         return self._mat[from_][to]
 
 
-@dataclass
-class GraphNode:
-    v: int
-    e: Dict[int, Tuple[float, "GraphNode"]]
-
-
 class Solver:
     def __init__(self, dist_provider: DistanceProvider, cons: GoalContraints):
         self._dist_provider = dist_provider

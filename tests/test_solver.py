@@ -3,7 +3,6 @@ from calendar_planner.solver import (
     DistanceProvider,
     MatrixDistanceProvider,
     ConstraintSlot,
-    GraphNode,
 )
 import mock
 
@@ -77,6 +76,8 @@ def test_solve_one():
     cost, end_t, r = s.solve()
 
     assert [0, 1, 2] == r
+    assert cost == 2.0
+    assert end_t == 16.0
 
 
 def test_solve_asym():
@@ -102,6 +103,8 @@ def test_solve_asym():
     cost, end_t, r = s.solve()
 
     assert [0, 2, 1] == r
+    assert cost == 2.0
+    assert end_t == 17.0
 
 
 def test_solve_tight():
@@ -116,3 +119,5 @@ def test_solve_tight():
     cost, end_t, r = s.solve()
 
     assert [0, 1, 2] == r
+    assert cost == 2.0
+    assert end_t == 16.0
